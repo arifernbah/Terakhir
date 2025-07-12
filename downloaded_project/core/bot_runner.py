@@ -266,6 +266,8 @@ class BinanceFuturesProBot:
             self.telegram_app.add_handler(CommandHandler("upgrade", self.telegram_upgrade))
             self.telegram_app.add_handler(CommandHandler("equity", self.telegram_equity))
             self.telegram_app.add_handler(CommandHandler("risk", self.telegram_risk))
+            # New: refresh symbols to top-volume
+            self.telegram_app.add_handler(CommandHandler("topvolume", self.telegram_topvolume))
             
             logger.info("Telegram bot initialized with professional commands")
             
@@ -419,6 +421,7 @@ class BinanceFuturesProBot:
             "/testnet  – pindah test\n"
             "/real     – balik real\n"
             "/stop     – matiin bot\n"
+            "/topvolume – ganti 10 pair volume tertinggi\n"
             "😎 gampang kan?"
         )
         await update.message.reply_text(help_msg, parse_mode='Markdown')
@@ -557,6 +560,39 @@ class BinanceFuturesProBot:
             
         except Exception as e:
             await update.message.reply_text(f"Error: {str(e)}")
+    
+    async def telegram_topvolume(self, update, context):
+        """Handler /topvolume – ambil 10 pair volume tertinggi & update symbols"""
+        try:
+            if not self.client:
+                await update.message.reply_text("❌ Bot belum connect ke Binance")
+                return
+
+            # Ambil saldo untuk hitung tradeable symbols (pakai fungsi bawaan)
+            balances = await self.client.futures_account_balance()
+            usdt_balance = next((float(x['balance']) for x in balances if x['asset'] == 'USDT'), 0)
+
+            tradeable_symbols = await self.get_tradeable_symbols(usdt_balance)
+            if tradeable_symbols:
+                self.symbols = tradeable_symbols
+                # Simpan ke config jika tersedia
+                if isinstance(self.config, dict):
+                    self.config['symbols'] = tradeable_symbols
+                else:
+                    self.config.symbols = tradeable_symbols
+                    if hasattr(self.config, 'save_config'):
+                        self.config.save_config()
+
+                await update.message.reply_text(
+                    f"✅ Symbol list di-update ke 10 volume tertinggi:\n{', '.join(tradeable_symbols)}",
+                    parse_mode='Markdown'
+                )
+                logger.info(f"Symbols updated via /topvolume: {tradeable_symbols}")
+            else:
+                await update.message.reply_text("⚠️ Balance tidak cukup atau tidak dapat mengambil symbol volume tertinggi")
+        except Exception as e:
+            await update.message.reply_text(f"Error: {str(e)}")
+            logger.error(f"Error in /topvolume: {e}")
     
     # =========================
     # CORE TRADING FUNCTIONS
