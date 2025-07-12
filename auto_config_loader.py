@@ -67,6 +67,18 @@ def load_config_auto(api_key, api_secret, config_file="config_hybrid_all.json"):
         config['api_key'] = api_key
         config['api_secret'] = api_secret
         
+        # Add testnet detection
+        is_testnet = False
+        if api_key and api_secret:
+            if len(api_key) < 50 or "test" in api_key.lower():
+                is_testnet = True
+        config['is_testnet'] = is_testnet
+        
+        # Add telegram credentials from environment
+        import os
+        config['telegram_token'] = os.getenv('TELEGRAM_TOKEN')
+        config['telegram_chat_id'] = os.getenv('TELEGRAM_CHAT_ID')
+        
         # Add equity trader instance to config
         config['equity_trader'] = equity_trader
         
@@ -103,4 +115,17 @@ def load_config_auto(api_key, api_secret, config_file="config_hybrid_all.json"):
         config['initial_balance'] = balance
         config['api_key'] = api_key
         config['api_secret'] = api_secret
+        
+        # Add testnet detection
+        is_testnet = False
+        if api_key and api_secret:
+            if len(api_key) < 50 or "test" in api_key.lower():
+                is_testnet = True
+        config['is_testnet'] = is_testnet
+        
+        # Add telegram credentials from environment
+        import os
+        config['telegram_token'] = os.getenv('TELEGRAM_TOKEN')
+        config['telegram_chat_id'] = os.getenv('TELEGRAM_CHAT_ID')
+        
         return config

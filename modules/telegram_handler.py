@@ -53,15 +53,21 @@ class TelegramNotifier:
             
             self.last_notification_time[message_hash] = current_time
             
-            # Note: Manual escaping is done in message creation, so we don't auto-escape here
-            # This prevents double escaping of already escaped characters
-            
-            # Send message
-            await self.bot.send_message(
-                chat_id=self.chat_id,
-                text=message,
-                parse_mode=parse_mode
-            )
+            # Try sending with Markdown first
+            try:
+                await self.bot.send_message(
+                    chat_id=self.chat_id,
+                    text=message,
+                    parse_mode=parse_mode
+                )
+            except Exception as markdown_error:
+                # If Markdown fails, try without parse_mode
+                logger.warning(f"Markdown parsing failed, trying without parse_mode: {markdown_error}")
+                await self.bot.send_message(
+                    chat_id=self.chat_id,
+                    text=message,
+                    parse_mode=None
+                )
             
         except Exception as e:
             logger.error(f"Error sending Telegram message: {e}")
@@ -149,8 +155,8 @@ class TelegramNotifier:
                 message += f"\n🎯 Pattern: {primary_pattern.split('(')[0].strip()}"
         
         # Add auto leverage info if available
-        if 'position_sizing' in entry_analysis:
-            leverage = entry_analysis.get('position_sizing', {}).get('leverage', 3)
+        if 'position_sizing' in pro_analysis:
+            leverage = pro_analysis.get('position_sizing', {}).get('leverage', 3)
             message += f"\n⚡ Auto Leverage: {leverage}x"
         
         # Add simplified reason
