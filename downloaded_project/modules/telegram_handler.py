@@ -113,11 +113,11 @@ class TelegramNotifier:
         """Concise exit msg, with self-defense if SL."""
 
         if profit_pct >= 0:
-            emoji = "✅" if profit_pct < 0.01 else "�" if profit_pct < 0.03 else "�"
+            emoji = "✅" if profit_pct < 0.01 else "📈" if profit_pct < 0.03 else "🚀"
             return f"{emoji} Close {symbol} {profit_pct:+.2%} | {reason.split('|')[0]}"
         else:
             # loss / stop-loss – bot defends itself jokingly
-            return f"� SL kena ({profit_pct:.2%}). Bukan salah gue, market toxic bro!"
+            return f"😢 SL kena ({profit_pct:.2%}). Bukan salah gue, market toxic bro!"
     
     def get_status_message(self, balance: float, active_positions: int, mode: str, pro_stats: Dict) -> str:
         """Simple status message"""
@@ -140,7 +140,7 @@ class TelegramNotifier:
 📈 Win Rate: **{pro_stats.get('win_rate', 0) * 100:.1f}%** \\(berapa kali menang\\)
 🎯 Kelly: **{pro_stats.get('kelly_percentage', 0) * 100:.2f}%** \\(berapa % modal\\)
 
-Ready cuan bro! Atau siap rugi �"""
+Ready cuan bro! Atau siap rugi 😅"""
         
         return message
     

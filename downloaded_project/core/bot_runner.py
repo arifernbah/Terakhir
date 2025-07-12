@@ -350,7 +350,7 @@ class BinanceFuturesProBot:
                 initial_balance = 100.0  # Default reference
                 growth = ((balance / initial_balance - 1) * 100)
                 
-                mood = "�" if growth > 10 else "⚡" if growth > 5 else "📈" if growth > 0 else "🛡️"
+                mood = "💎" if growth > 10 else "⚡" if growth > 5 else "📈" if growth > 0 else "🛡️"
                 balance_msg = (
                     f"{mood} Bal ${balance:.2f} | UnPNL ${total_unrealized_pnl:.2f} | Growth {growth:+.1f}%"
                 )
@@ -409,7 +409,7 @@ class BinanceFuturesProBot:
     async def telegram_help(self, update, context):
         """Handler untuk /help"""
         help_msg = (
-            "� *COMMANDS*\n"
+            "📖 *COMMANDS*\n"
             "/status   – kondisi bot\n"
             "/balance  – saldo & growth\n"
             "/performance – rekap trade\n"
@@ -419,7 +419,7 @@ class BinanceFuturesProBot:
             "/testnet  – pindah test\n"
             "/real     – balik real\n"
             "/stop     – matiin bot\n"
-            "� gampang kan?"
+            "😎 gampang kan?"
         )
         await update.message.reply_text(help_msg, parse_mode='Markdown')
     
