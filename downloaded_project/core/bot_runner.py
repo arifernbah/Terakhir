@@ -268,6 +268,9 @@ class BinanceFuturesProBot:
             self.telegram_app.add_handler(CommandHandler("risk", self.telegram_risk))
             # New: refresh symbols to top-volume
             self.telegram_app.add_handler(CommandHandler("topvolume", self.telegram_topvolume))
+            # New: set risk level & max open positions
+            self.telegram_app.add_handler(CommandHandler("risklevel", self.telegram_set_risklevel))
+            self.telegram_app.add_handler(CommandHandler("maxop", self.telegram_set_maxop))
             
             logger.info("Telegram bot initialized with professional commands")
             
@@ -422,6 +425,8 @@ class BinanceFuturesProBot:
             "/real     – balik real\n"
             "/stop     – matiin bot\n"
             "/topvolume – ganti 10 pair volume tertinggi\n"
+            "/risklevel <level> – set risk level\n"
+            "/maxop <n> – set jumlah posisi maksimum\n"
             "😎 gampang kan?"
         )
         await update.message.reply_text(help_msg, parse_mode='Markdown')
@@ -593,6 +598,68 @@ class BinanceFuturesProBot:
         except Exception as e:
             await update.message.reply_text(f"Error: {str(e)}")
             logger.error(f"Error in /topvolume: {e}")
+    
+    async def telegram_set_risklevel(self, update, context):
+        """/risklevel <level> – ubah self.config.risk_level"""
+        try:
+            args = context.args if hasattr(context, 'args') else []
+            if not args:
+                await update.message.reply_text("Format: /risklevel <level> (mis: conservative, aggressive)")
+                return
+
+            level = args[0].lower()
+            valid_levels = [
+                'ultra_conservative', 'conservative', 'moderate', 'balanced',
+                'professional', 'aggressive', 'full_aggressive'
+            ]
+            if level not in valid_levels:
+                await update.message.reply_text(f"❌ Level tidak dikenal. Pilih: {', '.join(valid_levels)}")
+                return
+
+            # update config
+            if isinstance(self.config, dict):
+                self.config['risk_level'] = level
+            else:
+                self.config.risk_level = level
+                if hasattr(self.config, 'save_config'):
+                    self.config.save_config()
+
+            await update.message.reply_text(f"✅ Risk level di-set ke *{level}*", parse_mode='Markdown')
+            logger.info(f"Risk level updated via /risklevel: {level}")
+        except Exception as e:
+            logger.error(f"Error in /risklevel: {e}")
+            await update.message.reply_text(f"Error: {str(e)}")
+
+    async def telegram_set_maxop(self, update, context):
+        """/maxop <n> – ubah maksimum posisi terbuka"""
+        try:
+            args = context.args if hasattr(context, 'args') else []
+            if not args:
+                await update.message.reply_text("Format: /maxop <angka>")
+                return
+
+            try:
+                n = int(args[0])
+                if n <= 0 or n > 10:
+                    raise ValueError
+            except ValueError:
+                await update.message.reply_text("❌ Angka harus 1–10")
+                return
+
+            # update config
+            if isinstance(self.config, dict):
+                self.config['max_open_positions'] = n
+            else:
+                self.config.max_open_positions = n
+                self.config.max_open_trades = n  # alias
+                if hasattr(self.config, 'save_config'):
+                    self.config.save_config()
+
+            await update.message.reply_text(f"✅ Max open positions di-set ke *{n}*", parse_mode='Markdown')
+            logger.info(f"Max open positions updated via /maxop: {n}")
+        except Exception as e:
+            logger.error(f"Error in /maxop: {e}")
+            await update.message.reply_text(f"Error: {str(e)}")
     
     # =========================
     # CORE TRADING FUNCTIONS
