@@ -25,6 +25,7 @@ from binance.exceptions import BinanceAPIException
 # Telegram imports
 import telegram
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram import BotCommand
 import threading
 
 # Our modular imports - CLEAN & LIGHTWEIGHT
@@ -268,6 +269,24 @@ class BinanceFuturesProBot:
             self.telegram_app.add_handler(CommandHandler("risk", self.telegram_risk))
             
             logger.info("Telegram bot initialized with professional commands")
+
+            # Register command list for Telegram UI (menu)
+            commands = [
+                BotCommand("status", "Cek kondisi bot"),
+                BotCommand("balance", "Saldo & growth"),
+                BotCommand("performance", "Rekap trade"),
+                BotCommand("equity", "Info equity & DD"),
+                BotCommand("risk", "Analisa risiko"),
+                BotCommand("mode", "Mode trading"),
+                BotCommand("testnet", "Pindah testnet"),
+                BotCommand("real", "Balik real"),
+                BotCommand("stop", "Matikan bot"),
+                BotCommand("help", "Help singkat")
+            ]
+            try:
+                await self.telegram_app.bot.set_my_commands(commands)
+            except Exception as e:
+                logger.warning(f"Failed to set Telegram commands: {e}")
             
             # Initialize but don't start polling yet
             await self.telegram_app.initialize()
