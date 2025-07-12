@@ -41,6 +41,7 @@ from modules import (
     TelegramNotifier
 )
 from modules.performance_monitor import PerformanceMonitor
+from modules.attrdict import AttrDict  # NEW: attribute-access wrapper for dict configs
 
 # Setup logging
 logging.basicConfig(
@@ -65,7 +66,14 @@ class BinanceFuturesProBot:
     def __init__(self, config=None):
         # Initialize configuration with equity support
         if config:
-            self.config = config
+            # Accept both SmartConfig objects and plain dictionaries.
+            # If the caller supplies a dict (e.g. from auto_config_loader), wrap
+            # it in `AttrDict` so the rest of the bot can use attribute access
+            # transparently (self.config.is_testnet, self.config.api_key, …).
+            if isinstance(config, dict):
+                self.config = AttrDict(config)
+            else:
+                self.config = config
         else:
             self.config = SmartConfig()
             

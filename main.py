@@ -53,6 +53,9 @@ if __name__ == "__main__":
         'token': TELEGRAM_TOKEN,
         'chat_id': TELEGRAM_CHAT_ID
     }
+    # Expose flat keys for attribute-style access (used inside BotRunner)
+    config['telegram_token'] = TELEGRAM_TOKEN
+    config['telegram_chat_id'] = TELEGRAM_CHAT_ID
 
     # === Enhanced Equity System Info ===
     if config.get('equity_trader'):
