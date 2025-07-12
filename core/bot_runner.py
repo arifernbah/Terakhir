@@ -281,11 +281,10 @@ class BinanceFuturesProBot:
         try:
             if self.telegram_app:
                 logger.info("Starting Telegram polling...")
+                await self.telegram_app.initialize()
                 await self.telegram_app.start()
-                await self.telegram_app.updater.start_polling()
                 logger.info("Telegram polling started ✔️")
-                # Hold until stopped
-                await self.telegram_app.updater.wait_until_closed()
+                await self.telegram_app.wait_until_closed()
         except Exception as e:
             logger.error(f"Error starting Telegram polling: {e}")
 
