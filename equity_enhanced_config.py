@@ -119,12 +119,19 @@ class EnhancedEquityTrading(EquityBasedTrading):
                 'daily_loss_limit': 6.0,
                 'daily_profit_target': 15.0
             },
+            'professional': {
+                'base_risk_percent': 1.8,
+                'max_risk_percent': 3.0,
+                'max_drawdown_percent': 15.0,
+                'daily_loss_limit': 4.0,
+                'daily_profit_target': 8.0
+            },
             'full_aggressive': {
-                'base_risk_percent': 3.0,
-                'max_risk_percent': 6.0,
-                'max_drawdown_percent': 25.0,
-                'daily_loss_limit': 8.0,
-                'daily_profit_target': 20.0
+                'base_risk_percent': 1.8,
+                'max_risk_percent': 3.0,
+                'max_drawdown_percent': 15.0,
+                'daily_loss_limit': 4.0,
+                'daily_profit_target': 8.0
             }
         }
         
