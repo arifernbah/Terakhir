@@ -971,7 +971,7 @@ class BinanceFuturesProBot:
                     can_add_position = current_positions_count < max_positions
                     
                     if can_add_position:
-                        entry_analysis = self.smart_entry.analyze_entry(klines_data)
+                        entry_analysis = await self.smart_entry.analyze_entry(klines_data)
                         
                         # Determine entry type based on confidence and existing positions
                         high_confidence_threshold = self.config.get('high_confidence_threshold', 80) if isinstance(self.config, dict) else getattr(self.config, 'high_confidence_threshold', 80)
