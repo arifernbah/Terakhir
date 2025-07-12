@@ -324,18 +324,9 @@ class BinanceFuturesProBot:
                 mode = "TESTNET" if self.config.is_testnet else "REAL"
                 memory_usage = self.process.memory_info().rss / 1024 / 1024
                 
-                # Create status message directly
                 status_msg = (
-                    f"🤖 *ARIFBOT PRO TRADER STATUS*\n\n"
-                    f"💰 Balance: ${balance:.2f}\n"
-                    f"📊 Active Positions: {len(active_positions)}\n"
-                    f"🎯 Mode: {mode}\n"
-                    f"🧠 Memory: {memory_usage:.1f}MB\n\n"
-                    f"📈 PERFORMANCE:\n"
-                    f"• Win Rate: {pro_stats['win_rate']:.1%}\n"
-                    f"• Kelly %: {pro_stats['kelly_percentage']:.1%}\n"
-                    f"• Session: {pro_stats['current_session'].title()}\n\n"
-                    f"🚀 Bot Status: {'🟢 RUNNING' if self.is_running else '🔴 STOPPED'}"
+                    f"⚡ {mode} | Bal ${balance:.2f} | Pos {len(active_positions)} | "
+                    f"Win {pro_stats['win_rate']:.0%} | {'ON' if self.is_running else 'OFF'}"
                 )
                 
                 await update.message.reply_text(status_msg, parse_mode='Markdown')
@@ -359,21 +350,10 @@ class BinanceFuturesProBot:
                 initial_balance = 100.0  # Default reference
                 growth = ((balance / initial_balance - 1) * 100)
                 
+                mood = "�" if growth > 10 else "⚡" if growth > 5 else "📈" if growth > 0 else "🛡️"
                 balance_msg = (
-                    f"💰 *PROFESSIONAL BALANCE REPORT*\n\n"
-                    f"Current Balance: ${balance:.2f}\n"
-                    f"Unrealized PnL: ${total_unrealized_pnl:.2f}\n"
-                    f"Total Growth: {growth:+.2f}%\n\n"
+                    f"{mood} Bal ${balance:.2f} | UnPNL ${total_unrealized_pnl:.2f} | Growth {growth:+.1f}%"
                 )
-                
-                if growth > 10:
-                    balance_msg += "🔥 Exceptional performance! Keep it up!"
-                elif growth > 5:
-                    balance_msg += "⚡ Solid growth! Pro algorithm working!"
-                elif growth > 0:
-                    balance_msg += "📈 Positive growth! Steady progress!"
-                else:
-                    balance_msg += "🛡️ Capital protection mode active!"
                 
                 await update.message.reply_text(balance_msg, parse_mode='Markdown')
             else:
@@ -393,27 +373,10 @@ class BinanceFuturesProBot:
                 win_rate = winning_trades / total_trades if total_trades > 0 else 0
                 
                 performance_msg = (
-                    f"📊 *TRADING PERFORMANCE*\n\n"
-                    f"📈 Total Trades: {total_trades}\n"
-                    f"✅ Winning Trades: {winning_trades}\n"
-                    f"❌ Losing Trades: {total_trades - winning_trades}\n"
-                    f"🎯 Win Rate: {win_rate:.1%}\n\n"
-                    f"💰 Recent Trades:\n"
+                    f"📊 Trades {total_trades} | Win {win_rate:.0%} ({winning_trades}/{total_trades})"
                 )
-                
-                # Show last 5 trades
-                for trade in trades_history[-5:]:
-                    profit = trade.get('profit_pct', 0)
-                    symbol = trade.get('symbol', 'Unknown')
-                    emoji = "✅" if profit > 0 else "❌"
-                    performance_msg += f"{emoji} {symbol}: {profit:+.2%}\n"
             else:
-                performance_msg = (
-                    f"📊 *TRADING PERFORMANCE*\n\n"
-                    f"📈 Total Trades: 0\n"
-                    f"🎯 Win Rate: 0%\n\n"
-                    f"💡 Bot belum melakukan trade pertama"
-                )
+                performance_msg = "📊 Belum ada trade, santai dulu bro"
             
             await update.message.reply_text(performance_msg, parse_mode='Markdown')
         except Exception as e:
