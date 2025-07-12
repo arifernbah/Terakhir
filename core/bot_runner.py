@@ -188,19 +188,29 @@ class BinanceFuturesProBot:
     async def init_binance_client(self) -> bool:
         """Initialize Binance client dengan error handling"""
         try:
-            if self.config.is_testnet:
+            # Handle both dictionary and object-based configurations
+            if isinstance(self.config, dict):
+                is_testnet = self.config.get('is_testnet', False)
+                api_key = self.config.get('api_key')
+                api_secret = self.config.get('api_secret')
+            else:
+                is_testnet = getattr(self.config, 'is_testnet', False)
+                api_key = getattr(self.config, 'api_key', None)
+                api_secret = getattr(self.config, 'api_secret', None)
+            
+            if is_testnet:
                 await self.telegram.send_casual_message("🧪 *Mode TESTNET*\nSantai aja, ini cuma latihan!")
             else:
                 await self.telegram.send_casual_message("🚨 *MODE REAL TRADING*\nHati-hati ya, ini duit beneran!")
             
-            if not self.config.api_key or not self.config.api_secret:
+            if not api_key or not api_secret:
                 logger.error("API keys tidak tersedia")
                 return False
             
             self.client = await AsyncClient.create(
-                api_key=self.config.api_key,
-                api_secret=self.config.api_secret,
-                testnet=self.config.is_testnet
+                api_key=api_key,
+                api_secret=api_secret,
+                testnet=is_testnet
             )
             
             # Test connection dengan Futures API
@@ -239,11 +249,18 @@ class BinanceFuturesProBot:
     async def init_telegram_bot(self):
         """Initialize Telegram bot dengan commands (simple approach)"""
         try:
-            if not self.config.telegram_token:
+            # Handle both dictionary and object-based configurations
+            if isinstance(self.config, dict):
+                telegram_config = self.config.get('telegram', {})
+                telegram_token = telegram_config.get('token') or self.config.get('telegram_token')
+            else:
+                telegram_token = getattr(self.config, 'telegram_token', None)
+            
+            if not telegram_token:
                 logger.warning("Telegram token tidak tersedia")
                 return
             
-            self.telegram_app = Application.builder().token(self.config.telegram_token).build()
+            self.telegram_app = Application.builder().token(telegram_token).build()
             
             # Command handlers
             self.telegram_app.add_handler(CommandHandler("start", self.telegram_start))
@@ -320,7 +337,12 @@ class BinanceFuturesProBot:
                     'current_session': 'london'
                 }
                 
-                mode = "TESTNET" if self.config.is_testnet else "REAL"
+                # Handle both dictionary and object-based configurations
+                if isinstance(self.config, dict):
+                    is_testnet = self.config.get('is_testnet', False)
+                else:
+                    is_testnet = getattr(self.config, 'is_testnet', False)
+                mode = "TESTNET" if is_testnet else "REAL"
                 memory_usage = self.process.memory_info().rss / 1024 / 1024
                 
                 # Create status message directly
@@ -420,20 +442,33 @@ class BinanceFuturesProBot:
     
     async def telegram_mode(self, update, context):
         """Handler untuk /mode"""
-        mode = "TESTNET 🧪" if self.config.is_testnet else "REAL TRADING 🚨"
+        # Handle both dictionary and object-based configurations
+        if isinstance(self.config, dict):
+            is_testnet = self.config.get('is_testnet', False)
+        else:
+            is_testnet = getattr(self.config, 'is_testnet', False)
+        mode = "TESTNET 🧪" if is_testnet else "REAL TRADING 🚨"
         await update.message.reply_text(f"Current mode: *{mode}*", parse_mode='Markdown')
     
     async def telegram_testnet(self, update, context):
         """Handler untuk /testnet"""
-        self.config.is_testnet = True
-        self.config.save_config()
+        # Handle both dictionary and object-based configurations
+        if isinstance(self.config, dict):
+            self.config['is_testnet'] = True
+        else:
+            self.config.is_testnet = True
+            self.config.save_config()
         await update.message.reply_text("✅ Switched to *TESTNET*\nBot will restart automatically", parse_mode='Markdown')
         await self.restart_with_new_mode()
     
     async def telegram_real(self, update, context):
         """Handler untuk /real"""
-        self.config.is_testnet = False
-        self.config.save_config()
+        # Handle both dictionary and object-based configurations
+        if isinstance(self.config, dict):
+            self.config['is_testnet'] = False
+        else:
+            self.config.is_testnet = False
+            self.config.save_config()
         await update.message.reply_text("🚨 Switched to *REAL TRADING*\nBe careful! Bot restarting...", parse_mode='Markdown')
         await self.restart_with_new_mode()
     

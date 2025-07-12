@@ -48,6 +48,12 @@ if __name__ == "__main__":
     
     config = load_config_auto(API_KEY, API_SECRET)
 
+    # Handle case when config is None (no API keys)
+    if config is None:
+        print("[ERROR] Failed to load configuration. Please check your API keys in .env file.")
+        print("[ERROR] Make sure API_KEY, API_SECRET, TELEGRAM_TOKEN, and TELEGRAM_CHAT_ID are set.")
+        exit(1)
+
     # Inject Telegram config
     config['telegram'] = {
         'token': TELEGRAM_TOKEN,

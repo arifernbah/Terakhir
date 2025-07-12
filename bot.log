@@ -4,3 +4,21 @@
 2025-07-12 07:14:04,656 - INFO - [EQUITY] Enhanced equity system loaded
 2025-07-12 07:14:04,656 - INFO - [EQUITY] Risk Level: professional
 2025-07-12 07:14:04,657 - INFO - [EQUITY] Base Risk: 1.8%
+2025-07-12 08:09:08,805 - INFO - [EQUITY] Enhanced equity system loaded
+2025-07-12 08:09:08,805 - INFO - [EQUITY] Risk Level: ultra_conservative
+2025-07-12 08:09:08,805 - INFO - [EQUITY] Base Risk: 0.8%
+2025-07-12 08:09:09,339 - INFO - HTTP Request: POST https://api.telegram.org/botyour_telegram_bot_token_here/sendMessage "HTTP/1.1 404 Not Found"
+2025-07-12 08:09:09,339 - ERROR - Error sending Telegram message: Not Found
+2025-07-12 08:09:09,499 - INFO - HTTP Request: POST https://api.telegram.org/botyour_telegram_bot_token_here/sendMessage "HTTP/1.1 404 Not Found"
+2025-07-12 08:09:09,499 - ERROR - Error sending Telegram message (fallback): Not Found
+2025-07-12 08:09:10,342 - ERROR - Error testing Futures connection: APIError(code=-2014): API-key format invalid.
+2025-07-12 08:09:10,502 - INFO - HTTP Request: POST https://api.telegram.org/botyour_telegram_bot_token_here/sendMessage "HTTP/1.1 404 Not Found"
+2025-07-12 08:09:10,502 - ERROR - Error sending Telegram message: Not Found
+2025-07-12 08:09:10,662 - INFO - HTTP Request: POST https://api.telegram.org/botyour_telegram_bot_token_here/sendMessage "HTTP/1.1 404 Not Found"
+2025-07-12 08:09:10,663 - ERROR - Error sending Telegram message (fallback): Not Found
+2025-07-12 08:09:10,663 - ERROR - Failed to initialize Binance client
+2025-07-12 08:09:10,701 - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f2b008b7770>
+2025-07-12 08:09:10,702 - ERROR - Unclosed connector
+connections: ['[(<aiohttp.client_proto.ResponseHandler object at 0x7f2b008d5250>, 7380.501021187)]', '[(<aiohttp.client_proto.ResponseHandler object at 0x7f2b008d4c50>, 7380.888692205)]']
+connector: <aiohttp.connector.TCPConnector object at 0x7f2b008b6f90>
