@@ -53,8 +53,9 @@ class TelegramNotifier:
             
             self.last_notification_time[message_hash] = current_time
             
-            # Note: Manual escaping is done in message creation, so we don't auto-escape here
-            # This prevents double escaping of already escaped characters
+            # Escape special characters for Markdown if parse_mode is Markdown
+            if parse_mode == 'Markdown':
+                message = self._escape_markdown(message)
             
             # Send message
             await self.bot.send_message(
@@ -77,11 +78,28 @@ class TelegramNotifier:
     
     def _escape_markdown(self, text: str) -> str:
         """Escape special characters for Markdown parsing"""
-        # Characters that need escaping in Markdown
-        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        import re
         
+        # First, protect existing Markdown formatting
+        protected_patterns = [
+            (r'\*\*(.*?)\*\*', r'__BOLD__\1__/BOLD__'),  # Bold text
+            (r'__(.*?)__', r'__ITALIC__\1__/ITALIC__'),   # Italic text
+            (r'`(.*?)`', r'__CODE__\1__/CODE__'),         # Inline code
+        ]
+        
+        # Protect existing formatting
+        for pattern, replacement in protected_patterns:
+            text = re.sub(pattern, replacement, text)
+        
+        # Escape special characters that are not part of formatting
+        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
         for char in special_chars:
             text = text.replace(char, f'\\{char}')
+        
+        # Restore protected formatting
+        text = text.replace('__BOLD__', '**').replace('__/BOLD__', '**')
+        text = text.replace('__ITALIC__', '__').replace('__/ITALIC__', '__')
+        text = text.replace('__CODE__', '`').replace('__/CODE__', '`')
         
         return text
     
