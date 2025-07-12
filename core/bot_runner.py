@@ -293,20 +293,13 @@ class BinanceFuturesProBot:
     async def telegram_start(self, update, context):
         """Handler untuk /start - Professional welcome"""
         welcome_msg = (
-            "🤖 *PRO TRADER BOT - Modular Edition*\n\n"
-            "🧠 Intelligence: 10-year Pro Trader\n"
-            "🏛️ Market Analysis: Institutional\n"
-            "🎯 Risk Management: Hedge Fund\n\n"
-            "*Commands Available:*\n"
-            "/status - Bot status & positions\n"
-            "/balance - Account balance & growth\n"
-            "/performance - Trading performance\n"
-            "/mode - Current trading mode\n"
-            "/testnet - Switch to testnet\n"
-            "/real - Switch to real trading\n"
-            "/stop - Stop the bot\n"
-            "/help - Show this help\n\n"
-            "Ready untuk cuan professional! 🚀💎"
+            "🤖 *Bot nyala!*\n\n"
+            "/status  – liat kondisi\n"
+            "/balance – grow atau nyungsep?\n"
+            "/performance – rekap win-loss\n"
+            "/mode – real / test?\n"
+            "/help – list singkat\n\n"
+            "Gas cuan, jaga risk! 🚀"
         )
         
         await update.message.reply_text(welcome_msg, parse_mode='Markdown')
@@ -453,23 +446,17 @@ class BinanceFuturesProBot:
     async def telegram_help(self, update, context):
         """Handler untuk /help"""
         help_msg = (
-            "🤖 *ARIFBOT PRO TRADER COMMANDS*\n\n"
-            "📊 *BASIC COMMANDS:*\n"
-            "/start - Welcome message\n"
-            "/status - Bot status & positions\n"
-            "/balance - Account balance & growth\n"
-            "/performance - Trading performance\n"
-            "/upgrade - Performance & upgrade status\n\n"
-            "💰 *EQUITY COMMANDS:*\n"
-            "/equity - Equity trading status\n"
-            "/risk - Current risk analysis\n\n"
-            "⚙️ *CONTROL COMMANDS:*\n"
-            "/mode - Current trading mode\n"
-            "/testnet - Switch to testnet\n"
-            "/real - Switch to real trading\n"
-            "/stop - Stop the bot\n"
-            "/help - Show this help\n\n"
-            "🚀 Ready untuk cuan professional dengan equity system!"
+            "� *COMMANDS*\n"
+            "/status   – kondisi bot\n"
+            "/balance  – saldo & growth\n"
+            "/performance – rekap trade\n"
+            "/equity   – info DD & risk\n"
+            "/risk     – analisa risiko\n"
+            "/mode     – real / test\n"
+            "/testnet  – pindah test\n"
+            "/real     – balik real\n"
+            "/stop     – matiin bot\n"
+            "� gampang kan?"
         )
         await update.message.reply_text(help_msg, parse_mode='Markdown')
     
