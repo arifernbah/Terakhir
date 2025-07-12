@@ -94,14 +94,9 @@ class TelegramNotifier:
         """Startup message yang lucu dan ringan"""
         # Updated startup notification as per latest user request
         return (
-            "🤖 ArifBot nyala, breee.\n\n"
-            "Kerja sih kerja... tapi kalo market ngambek, ya gue ikut diem.\n\n"
-            "⚙️ Posisi? 3.\n"
-            "Profit? Mungkin.\n"
-            "Tujuan hidup? Belum tau.\n\n"
-            "Lo entry? Bagus.\n"
-            "Lo diem? Lebih bagus.\n"
-            "Lo tanya ‘masuk gak?’ — ya suka-suka lo, breee 😭"
+            "🤖 Bot nyala, bro!\n"
+            "Gue jagain saldo, lu jagain kopi.\n"
+            "Market rame? Gas. Sepi? Ngopi dulu. ☕"
         )
     
     def get_entry_message(self, action: str, symbol: str, confidence: float, reason: str, pro_analysis: Dict, genius_features: Dict = None) -> str:
