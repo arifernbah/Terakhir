@@ -74,6 +74,19 @@ class EnhancedEquityTrading(EquityBasedTrading):
         if selected_config is None:
             selected_config = balance_configs[-1][1]
         
+        # Ensure multi-pair support: if only single 'symbol' provided, supply
+        # default top-cap list so the bot can scan multiple pairs automatically.
+        if 'symbols' not in selected_config:
+            default_pairs = [
+                "DOGEUSDT", "BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT",
+                "SOLUSDT", "MATICUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT"
+            ]
+            # Preserve the original primary symbol at index 0 for backward compatibility.
+            primary = selected_config.get('symbol', 'BTCUSDT')
+            if primary in default_pairs:
+                default_pairs.remove(primary)
+            selected_config['symbols'] = [primary] + default_pairs
+
         return selected_config
     
     def convert_to_equity_config(self, hybrid_config: Dict[str, Any]) -> Dict[str, Any]:
@@ -84,52 +97,53 @@ class EnhancedEquityTrading(EquityBasedTrading):
         
         # Mapping risk level ke equity parameters
         risk_mapping = {
+            # ---- UPDATED limits (stricter draw-down / daily-loss) ----
             'ultra_conservative': {
                 'base_risk_percent': 0.8,
                 'max_risk_percent': 2.0,
-                'max_drawdown_percent': 12.0,
-                'daily_loss_limit': 2.5,
+                'max_drawdown_percent': 8.0,   # was 12
+                'daily_loss_limit': 2.0,        # was 2.5
                 'daily_profit_target': 6.0
             },
             'very_conservative': {
                 'base_risk_percent': 1.2,
                 'max_risk_percent': 2.5,
-                'max_drawdown_percent': 15.0,
-                'daily_loss_limit': 3.0,
+                'max_drawdown_percent': 10.0,  # was 15
+                'daily_loss_limit': 3.0,       # unchanged (already stricter)
                 'daily_profit_target': 8.0
             },
             'moderate': {
                 'base_risk_percent': 1.5,
                 'max_risk_percent': 3.5,
-                'max_drawdown_percent': 18.0,
-                'daily_loss_limit': 4.0,
+                'max_drawdown_percent': 15.0,  # was 18
+                'daily_loss_limit': 4.0,       # unchanged (still fits rule)
                 'daily_profit_target': 10.0
             },
             'balanced': {
                 'base_risk_percent': 2.0,
                 'max_risk_percent': 4.0,
-                'max_drawdown_percent': 20.0,
-                'daily_loss_limit': 5.0,
+                'max_drawdown_percent': 18.0,  # was 20
+                'daily_loss_limit': 5.0,       # unchanged
                 'daily_profit_target': 12.0
             },
             'balanced_plus': {
                 'base_risk_percent': 2.5,
                 'max_risk_percent': 5.0,
-                'max_drawdown_percent': 22.0,
-                'daily_loss_limit': 6.0,
+                'max_drawdown_percent': 20.0,  # was 22
+                'daily_loss_limit': 5.0,       # stricter than 6
                 'daily_profit_target': 15.0
             },
             'professional': {
                 'base_risk_percent': 1.8,
                 'max_risk_percent': 3.0,
-                'max_drawdown_percent': 15.0,
+                'max_drawdown_percent': 18.0,  # tighter (was 15 / 20 mix)
                 'daily_loss_limit': 4.0,
                 'daily_profit_target': 8.0
             },
             'full_aggressive': {
                 'base_risk_percent': 1.8,
                 'max_risk_percent': 3.0,
-                'max_drawdown_percent': 15.0,
+                'max_drawdown_percent': 18.0,
                 'daily_loss_limit': 4.0,
                 'daily_profit_target': 8.0
             }

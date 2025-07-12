@@ -48,17 +48,14 @@ if __name__ == "__main__":
     
     config = load_config_auto(API_KEY, API_SECRET)
 
-    # Handle case when config is None (no API keys)
-    if config is None:
-        print("[ERROR] Failed to load configuration. Please check your API keys in .env file.")
-        print("[ERROR] Make sure API_KEY, API_SECRET, TELEGRAM_TOKEN, and TELEGRAM_CHAT_ID are set.")
-        exit(1)
-
     # Inject Telegram config
     config['telegram'] = {
         'token': TELEGRAM_TOKEN,
         'chat_id': TELEGRAM_CHAT_ID
     }
+    # Expose flat keys for attribute-style access (used inside BotRunner)
+    config['telegram_token'] = TELEGRAM_TOKEN
+    config['telegram_chat_id'] = TELEGRAM_CHAT_ID
 
     # === Enhanced Equity System Info ===
     if config.get('equity_trader'):

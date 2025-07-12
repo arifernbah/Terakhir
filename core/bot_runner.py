@@ -41,6 +41,7 @@ from modules import (
     TelegramNotifier
 )
 from modules.performance_monitor import PerformanceMonitor
+from modules.attrdict import AttrDict  # NEW: attribute-access wrapper for dict configs
 
 # Setup logging
 logging.basicConfig(
@@ -65,7 +66,14 @@ class BinanceFuturesProBot:
     def __init__(self, config=None):
         # Initialize configuration with equity support
         if config:
-            self.config = config
+            # Accept both SmartConfig objects and plain dictionaries.
+            # If the caller supplies a dict (e.g. from auto_config_loader), wrap
+            # it in `AttrDict` so the rest of the bot can use attribute access
+            # transparently (self.config.is_testnet, self.config.api_key, …).
+            if isinstance(config, dict):
+                self.config = AttrDict(config)
+            else:
+                self.config = config
         else:
             self.config = SmartConfig()
             
@@ -188,29 +196,19 @@ class BinanceFuturesProBot:
     async def init_binance_client(self) -> bool:
         """Initialize Binance client dengan error handling"""
         try:
-            # Handle both dictionary and object-based configurations
-            if isinstance(self.config, dict):
-                is_testnet = self.config.get('is_testnet', False)
-                api_key = self.config.get('api_key')
-                api_secret = self.config.get('api_secret')
-            else:
-                is_testnet = getattr(self.config, 'is_testnet', False)
-                api_key = getattr(self.config, 'api_key', None)
-                api_secret = getattr(self.config, 'api_secret', None)
-            
-            if is_testnet:
+            if self.config.is_testnet:
                 await self.telegram.send_casual_message("🧪 *Mode TESTNET*\nSantai aja, ini cuma latihan!")
             else:
                 await self.telegram.send_casual_message("🚨 *MODE REAL TRADING*\nHati-hati ya, ini duit beneran!")
             
-            if not api_key or not api_secret:
+            if not self.config.api_key or not self.config.api_secret:
                 logger.error("API keys tidak tersedia")
                 return False
             
             self.client = await AsyncClient.create(
-                api_key=api_key,
-                api_secret=api_secret,
-                testnet=is_testnet
+                api_key=self.config.api_key,
+                api_secret=self.config.api_secret,
+                testnet=self.config.is_testnet
             )
             
             # Test connection dengan Futures API
@@ -249,18 +247,11 @@ class BinanceFuturesProBot:
     async def init_telegram_bot(self):
         """Initialize Telegram bot dengan commands (simple approach)"""
         try:
-            # Handle both dictionary and object-based configurations
-            if isinstance(self.config, dict):
-                telegram_config = self.config.get('telegram', {})
-                telegram_token = telegram_config.get('token') or self.config.get('telegram_token')
-            else:
-                telegram_token = getattr(self.config, 'telegram_token', None)
-            
-            if not telegram_token:
+            if not self.config.telegram_token:
                 logger.warning("Telegram token tidak tersedia")
                 return
             
-            self.telegram_app = Application.builder().token(telegram_token).build()
+            self.telegram_app = Application.builder().token(self.config.telegram_token).build()
             
             # Command handlers
             self.telegram_app.add_handler(CommandHandler("start", self.telegram_start))
@@ -302,20 +293,13 @@ class BinanceFuturesProBot:
     async def telegram_start(self, update, context):
         """Handler untuk /start - Professional welcome"""
         welcome_msg = (
-            "🤖 *PRO TRADER BOT - Modular Edition*\n\n"
-            "🧠 Intelligence: 10-year Pro Trader\n"
-            "🏛️ Market Analysis: Institutional\n"
-            "🎯 Risk Management: Hedge Fund\n\n"
-            "*Commands Available:*\n"
-            "/status - Bot status & positions\n"
-            "/balance - Account balance & growth\n"
-            "/performance - Trading performance\n"
-            "/mode - Current trading mode\n"
-            "/testnet - Switch to testnet\n"
-            "/real - Switch to real trading\n"
-            "/stop - Stop the bot\n"
-            "/help - Show this help\n\n"
-            "Ready untuk cuan professional! 🚀💎"
+            "🤖 *Bot nyala!*\n\n"
+            "/status  – liat kondisi\n"
+            "/balance – grow atau nyungsep?\n"
+            "/performance – rekap win-loss\n"
+            "/mode – real / test?\n"
+            "/help – list singkat\n\n"
+            "Gas cuan, jaga risk! 🚀"
         )
         
         await update.message.reply_text(welcome_msg, parse_mode='Markdown')
@@ -337,26 +321,12 @@ class BinanceFuturesProBot:
                     'current_session': 'london'
                 }
                 
-                # Handle both dictionary and object-based configurations
-                if isinstance(self.config, dict):
-                    is_testnet = self.config.get('is_testnet', False)
-                else:
-                    is_testnet = getattr(self.config, 'is_testnet', False)
-                mode = "TESTNET" if is_testnet else "REAL"
+                mode = "TESTNET" if self.config.is_testnet else "REAL"
                 memory_usage = self.process.memory_info().rss / 1024 / 1024
                 
-                # Create status message directly
                 status_msg = (
-                    f"🤖 *ARIFBOT PRO TRADER STATUS*\n\n"
-                    f"💰 Balance: ${balance:.2f}\n"
-                    f"📊 Active Positions: {len(active_positions)}\n"
-                    f"🎯 Mode: {mode}\n"
-                    f"🧠 Memory: {memory_usage:.1f}MB\n\n"
-                    f"📈 PERFORMANCE:\n"
-                    f"• Win Rate: {pro_stats['win_rate']:.1%}\n"
-                    f"• Kelly %: {pro_stats['kelly_percentage']:.1%}\n"
-                    f"• Session: {pro_stats['current_session'].title()}\n\n"
-                    f"🚀 Bot Status: {'🟢 RUNNING' if self.is_running else '🔴 STOPPED'}"
+                    f"⚡ {mode} | Bal ${balance:.2f} | Pos {len(active_positions)} | "
+                    f"Win {pro_stats['win_rate']:.0%} | {'ON' if self.is_running else 'OFF'}"
                 )
                 
                 await update.message.reply_text(status_msg, parse_mode='Markdown')
@@ -380,21 +350,10 @@ class BinanceFuturesProBot:
                 initial_balance = 100.0  # Default reference
                 growth = ((balance / initial_balance - 1) * 100)
                 
+                mood = "�" if growth > 10 else "⚡" if growth > 5 else "📈" if growth > 0 else "🛡️"
                 balance_msg = (
-                    f"💰 *PROFESSIONAL BALANCE REPORT*\n\n"
-                    f"Current Balance: ${balance:.2f}\n"
-                    f"Unrealized PnL: ${total_unrealized_pnl:.2f}\n"
-                    f"Total Growth: {growth:+.2f}%\n\n"
+                    f"{mood} Bal ${balance:.2f} | UnPNL ${total_unrealized_pnl:.2f} | Growth {growth:+.1f}%"
                 )
-                
-                if growth > 10:
-                    balance_msg += "🔥 Exceptional performance! Keep it up!"
-                elif growth > 5:
-                    balance_msg += "⚡ Solid growth! Pro algorithm working!"
-                elif growth > 0:
-                    balance_msg += "📈 Positive growth! Steady progress!"
-                else:
-                    balance_msg += "🛡️ Capital protection mode active!"
                 
                 await update.message.reply_text(balance_msg, parse_mode='Markdown')
             else:
@@ -414,27 +373,10 @@ class BinanceFuturesProBot:
                 win_rate = winning_trades / total_trades if total_trades > 0 else 0
                 
                 performance_msg = (
-                    f"📊 *TRADING PERFORMANCE*\n\n"
-                    f"📈 Total Trades: {total_trades}\n"
-                    f"✅ Winning Trades: {winning_trades}\n"
-                    f"❌ Losing Trades: {total_trades - winning_trades}\n"
-                    f"🎯 Win Rate: {win_rate:.1%}\n\n"
-                    f"💰 Recent Trades:\n"
+                    f"📊 Trades {total_trades} | Win {win_rate:.0%} ({winning_trades}/{total_trades})"
                 )
-                
-                # Show last 5 trades
-                for trade in trades_history[-5:]:
-                    profit = trade.get('profit_pct', 0)
-                    symbol = trade.get('symbol', 'Unknown')
-                    emoji = "✅" if profit > 0 else "❌"
-                    performance_msg += f"{emoji} {symbol}: {profit:+.2%}\n"
             else:
-                performance_msg = (
-                    f"📊 *TRADING PERFORMANCE*\n\n"
-                    f"📈 Total Trades: 0\n"
-                    f"🎯 Win Rate: 0%\n\n"
-                    f"💡 Bot belum melakukan trade pertama"
-                )
+                performance_msg = "📊 Belum ada trade, santai dulu bro"
             
             await update.message.reply_text(performance_msg, parse_mode='Markdown')
         except Exception as e:
@@ -442,33 +384,20 @@ class BinanceFuturesProBot:
     
     async def telegram_mode(self, update, context):
         """Handler untuk /mode"""
-        # Handle both dictionary and object-based configurations
-        if isinstance(self.config, dict):
-            is_testnet = self.config.get('is_testnet', False)
-        else:
-            is_testnet = getattr(self.config, 'is_testnet', False)
-        mode = "TESTNET 🧪" if is_testnet else "REAL TRADING 🚨"
+        mode = "TESTNET 🧪" if self.config.is_testnet else "REAL TRADING 🚨"
         await update.message.reply_text(f"Current mode: *{mode}*", parse_mode='Markdown')
     
     async def telegram_testnet(self, update, context):
         """Handler untuk /testnet"""
-        # Handle both dictionary and object-based configurations
-        if isinstance(self.config, dict):
-            self.config['is_testnet'] = True
-        else:
-            self.config.is_testnet = True
-            self.config.save_config()
+        self.config.is_testnet = True
+        self.config.save_config()
         await update.message.reply_text("✅ Switched to *TESTNET*\nBot will restart automatically", parse_mode='Markdown')
         await self.restart_with_new_mode()
     
     async def telegram_real(self, update, context):
         """Handler untuk /real"""
-        # Handle both dictionary and object-based configurations
-        if isinstance(self.config, dict):
-            self.config['is_testnet'] = False
-        else:
-            self.config.is_testnet = False
-            self.config.save_config()
+        self.config.is_testnet = False
+        self.config.save_config()
         await update.message.reply_text("🚨 Switched to *REAL TRADING*\nBe careful! Bot restarting...", parse_mode='Markdown')
         await self.restart_with_new_mode()
     
@@ -480,23 +409,17 @@ class BinanceFuturesProBot:
     async def telegram_help(self, update, context):
         """Handler untuk /help"""
         help_msg = (
-            "🤖 *ARIFBOT PRO TRADER COMMANDS*\n\n"
-            "📊 *BASIC COMMANDS:*\n"
-            "/start - Welcome message\n"
-            "/status - Bot status & positions\n"
-            "/balance - Account balance & growth\n"
-            "/performance - Trading performance\n"
-            "/upgrade - Performance & upgrade status\n\n"
-            "💰 *EQUITY COMMANDS:*\n"
-            "/equity - Equity trading status\n"
-            "/risk - Current risk analysis\n\n"
-            "⚙️ *CONTROL COMMANDS:*\n"
-            "/mode - Current trading mode\n"
-            "/testnet - Switch to testnet\n"
-            "/real - Switch to real trading\n"
-            "/stop - Stop the bot\n"
-            "/help - Show this help\n\n"
-            "🚀 Ready untuk cuan professional dengan equity system!"
+            "� *COMMANDS*\n"
+            "/status   – kondisi bot\n"
+            "/balance  – saldo & growth\n"
+            "/performance – rekap trade\n"
+            "/equity   – info DD & risk\n"
+            "/risk     – analisa risiko\n"
+            "/mode     – real / test\n"
+            "/testnet  – pindah test\n"
+            "/real     – balik real\n"
+            "/stop     – matiin bot\n"
+            "� gampang kan?"
         )
         await update.message.reply_text(help_msg, parse_mode='Markdown')
     

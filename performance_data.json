@@ -1,0 +1,18 @@
+{
+  "trades": [
+    {
+      "symbol": "BTCUSDT",
+      "side": "BUY",
+      "entry_price": 50000,
+      "exit_price": 50500,
+      "quantity": 0.001,
+      "profit_pct": 1.0,
+      "timestamp": "2025-07-12T09:36:11.281306"
+    }
+  ],
+  "current_balance": 5.0,
+  "initial_balance": 5.0,
+  "upgrade_history": [],
+  "current_tier": "tier_1",
+  "last_upgrade": null
+}

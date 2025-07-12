@@ -51,6 +51,11 @@ def load_config_auto(api_key, api_secret, config_file="config_hybrid_all.json"):
     
     print(f"[INFO] Detected Futures Balance: ${balance:.2f}")
     
+    # Determine testnet / real mode for downstream components
+    is_testnet = False
+    if api_key:
+        is_testnet = ("testnet" in api_key.lower()) or (len(api_key) < 50)
+
     # Initialize enhanced equity trading system
     try:
         equity_trader = EnhancedEquityTrading(balance)
@@ -66,14 +71,7 @@ def load_config_auto(api_key, api_secret, config_file="config_hybrid_all.json"):
         config['initial_balance'] = balance
         config['api_key'] = api_key
         config['api_secret'] = api_secret
-        
-        # Add testnet detection
-        is_testnet = False
-        if api_key and api_secret:
-            # Testnet API key biasanya lebih pendek atau mengandung 'test'
-            if len(api_key) < 50 or "test" in api_key.lower():
-                is_testnet = True
-        config['is_testnet'] = is_testnet
+        config['is_testnet'] = is_testnet  # <-- ensure downstream attribute exists
         
         # Add equity trader instance to config
         config['equity_trader'] = equity_trader
@@ -111,13 +109,5 @@ def load_config_auto(api_key, api_secret, config_file="config_hybrid_all.json"):
         config['initial_balance'] = balance
         config['api_key'] = api_key
         config['api_secret'] = api_secret
-        
-        # Add testnet detection
-        is_testnet = False
-        if api_key and api_secret:
-            # Testnet API key biasanya lebih pendek atau mengandung 'test'
-            if len(api_key) < 50 or "test" in api_key.lower():
-                is_testnet = True
         config['is_testnet'] = is_testnet
-        
         return config

@@ -56,24 +56,29 @@ class TelegramNotifier:
             # Note: Manual escaping is done in message creation, so we don't auto-escape here
             # This prevents double escaping of already escaped characters
             
-            # Send message
-            await self.bot.send_message(
-                chat_id=self.chat_id,
-                text=message,
-                parse_mode=parse_mode
-            )
-            
-        except Exception as e:
-            logger.error(f"Error sending Telegram message: {e}")
-            # Fallback: try sending without parse_mode
+            # Attempt to send message using the requested parse_mode first
             try:
                 await self.bot.send_message(
                     chat_id=self.chat_id,
                     text=message,
-                    parse_mode=None
+                    parse_mode=parse_mode
                 )
-            except Exception as e2:
-                logger.error(f"Error sending Telegram message (fallback): {e2}")
+            except telegram.error.BadRequest as e:
+                # Frequently caused by un-escaped Markdown entities.
+                if "can't parse entities" in str(e):
+                    # Retry without parse mode (emoji & plain text are preserved).
+                    logger.debug(f"Markdown parse failed, resending without formatting: {e}")
+                    await self.bot.send_message(
+                        chat_id=self.chat_id,
+                        text=message,
+                        parse_mode=None
+                    )
+                else:
+                    raise
+            
+        except Exception as e:
+            # Log other errors once (to avoid noisy warnings) but continue silently.
+            logger.error(f"Error sending Telegram message: {e}")
     
     def _escape_markdown(self, text: str) -> str:
         """Escape special characters for Markdown parsing"""
@@ -89,134 +94,30 @@ class TelegramNotifier:
         """Startup message yang lucu dan ringan"""
         # Updated startup notification as per latest user request
         return (
-            "🤖 ArifBot nyala, breee.\n\n"
-            "Kerja sih kerja... tapi kalo market ngambek, ya gue ikut diem.\n\n"
-            "⚙️ Posisi? 3.\n"
-            "Profit? Mungkin.\n"
-            "Tujuan hidup? Belum tau.\n\n"
-            "Lo entry? Bagus.\n"
-            "Lo diem? Lebih bagus.\n"
-            "Lo tanya ‘masuk gak?’ — ya suka-suka lo, breee 😭"
+            "🤖 Bot nyala, bro!\n"
+            "Gue jagain saldo, lu jagain kopi.\n"
+            "Market rame? Gas. Sepi? Ngopi dulu. ☕"
         )
     
     def get_entry_message(self, action: str, symbol: str, confidence: float, reason: str, pro_analysis: Dict, genius_features: Dict = None) -> str:
-        """Enhanced entry message dengan genius analysis details"""
-        
-        # Get random genius emoji
-        emoji = random.choice(self.genius_entry_emojis)
-        
-        # Action dengan style lucu
-        if action.upper() == "LONG":
-            action_text = "🚀 **Gas Long**"
-            direction_emoji = "📈"
-        elif action.upper() == "SHORT":
-            action_text = "📉 **Gas Short**" 
-            direction_emoji = "📉"
-        else:
-            action_text = f"⏳ **{action.upper()}**"
-            direction_emoji = "⏳"
-        
-        # Confidence level dengan style lucu
-        if confidence >= 90:
-            confidence_text = "🧠 **Pinter banget**"
-        elif confidence >= 80:
-            confidence_text = "⚡ **Tinggi banget**"
-        elif confidence >= 70:
-            confidence_text = "🎯 **Tinggi**"
-        elif confidence >= 60:
-            confidence_text = "💫 **Lumayan**"
-        else:
-            confidence_text = "⚠️ **Rendah**"
-        
-        # Basic message structure
-        message = f"""{emoji} **Entry Signal** {direction_emoji}
+        """Short, friendly entry msg."""
 
-{action_text} {symbol}
-📊 Confidence: {confidence:.1f}% ({confidence_text})
+        dir_emoji = "📈" if action.upper() == "LONG" else "📉"
+        vibes = "🔥" if confidence >= 80 else "😎" if confidence >= 70 else "🤔"
+        brief_reason = reason.split(" | ")[0]
 
-📈 **Analysis:**"""
-        
-        # Add simplified analysis
-        if 'market_regime' in pro_analysis:
-            regime_data = pro_analysis['market_regime']
-            regime = regime_data.get('regime', 'unknown')
-            message += f"\n📊 Market: {regime.title()}"
-        
-        if genius_features and 'pattern_recognition' in genius_features:
-            pattern_data = genius_features['pattern_recognition']
-            primary_pattern = pattern_data.get('primary_pattern', 'none')
-            if 'none' not in primary_pattern:
-                message += f"\n🎯 Pattern: {primary_pattern.split('(')[0].strip()}"
-        
-        # Add auto leverage info if available
-        if 'position_sizing' in entry_analysis:
-            leverage = entry_analysis.get('position_sizing', {}).get('leverage', 3)
-            message += f"\n⚡ Auto Leverage: {leverage}x"
-        
-        # Add simplified reason
-        simplified_reason = reason.split(" | ")[0]  # Take only first part
-        message += f"\n\n� **Reason:** {simplified_reason}"
-        
-        # Add simple closer lucu
-        if confidence > 70:
-            message += f"\n\n🚀 Gas bro! Optimized mode - growth lebih cepat! 🙏"
-        else:
-            message += f"\n\n⚠️ Hati-hati ya! Optimized mode tetap jaga risk 😅"
-        
-        return message
+        return (f"{vibes} {action.upper()} {symbol} {dir_emoji}\n"
+                f"Conf {confidence:.0f}% | {brief_reason}")
     
     def get_exit_message(self, symbol: str, side: str, profit_pct: float, reason: str, urgency: str, exit_analysis: Dict = None) -> str:
-        """Enhanced exit message dengan genius analysis"""
-        
-        # Get appropriate emoji based on profit (lucu)
-        if profit_pct > 0.02:
-            emoji = "🚀"
-            profit_status = "**Gede banget cuannya**"
-        elif profit_pct > 0.01:
-            emoji = "💰"
-            profit_status = "**Bagus lah**"
-        elif profit_pct > 0.005:
-            emoji = "💎"
-            profit_status = "**Lumayan**"
-        elif profit_pct > 0:
-            emoji = "✅"
-            profit_status = "**Untung dikit**"
-        else:
-            emoji = "🛡️"
-            profit_status = "**Rugi dikit**"
-        
-        # Urgency styling
-        urgency_styles = {
-            "CRITICAL": "🚨 **Darurat**",
-            "HIGH": "⚠️ **Urgent**",
-            "MEDIUM": "⏰ **Smart**",
-            "LOW": "😌 **Santai**",
-            "NONE": "🟢 **Planned**"
-        }
-        urgency_text = urgency_styles.get(urgency, "📋 **Standard**")
-        
-        # Build message
-        message = f"""{emoji} **Exit Signal**
+        """Concise exit msg, with self-defense if SL."""
 
-🎯 **{side} {symbol} Closed**
-💰 P&L: **{profit_pct:+.2f}%** ({profit_status})
-⚡ Priority: {urgency_text}
-
-📊 **Reason:**"""
-        
-        # Add simple reason
-        clean_reason = reason.split(" | ")[0]  # Take only first part
-        message += f"\n{clean_reason}"
-        
-        # Simple closer lucu
-        if profit_pct > 0.01:
-            message += f"\n\n🚀 Mantap bro! Optimized mode cuan! 💰"
-        elif profit_pct > 0:
-            message += f"\n\n✅ Oke lah, optimized growth! 😊"
+        if profit_pct >= 0:
+            emoji = "✅" if profit_pct < 0.01 else "�" if profit_pct < 0.03 else "�"
+            return f"{emoji} Close {symbol} {profit_pct:+.2%} | {reason.split('|')[0]}"
         else:
-            message += f"\n\n🛡️ Risk managed! Optimized mode tetap aman 😅"
-        
-        return message
+            # loss / stop-loss – bot defends itself jokingly
+            return f"� SL kena ({profit_pct:.2%}). Bukan salah gue, market toxic bro!"
     
     def get_status_message(self, balance: float, active_positions: int, mode: str, pro_stats: Dict) -> str:
         """Simple status message"""
