@@ -54,31 +54,44 @@ if __name__ == "__main__":
         'chat_id': TELEGRAM_CHAT_ID
     }
 
+    # === Enhanced Equity System Info ===
+    if config.get('equity_trader'):
+        equity_trader = config['equity_trader']
+        print(f"[EQUITY] Enhanced system active!")
+        print(f"[EQUITY] Risk Level: {equity_trader.risk_level}")
+        print(f"[EQUITY] Base Risk: {equity_trader.base_risk_percent}%")
+        print(f"[EQUITY] Leverage: {equity_trader.leverage}x")
+        print(f"[EQUITY] Max Drawdown: {equity_trader.max_drawdown_percent}%")
+    
     # === Kelly Sizing Activation ===
-    if config["initial_balance"] >= 50:
+    if config.get("initial_balance", 0) >= 50:
         winrate = 0.75  # example fixed winrate
-        tp = config["take_profit"]["tp_percent"]
-        sl = config["stop_loss"]["sl_percent"]
-        rr = tp / sl
-        # Kelly fraction calculation moved to position_sizing module
-        config["position_sizing"]["method"] = "kelly_partial"
-        print(f"[DYNAMIC] Kelly sizing active for balance >= $50")
+        tp = config.get("take_profit", {}).get("tp_percent", 1.5)
+        sl = config.get("stop_loss", {}).get("sl_percent", 0.75)
+        if sl > 0:
+            rr = tp / sl
+            # Kelly fraction calculation moved to position_sizing module
+            if "position_sizing" in config:
+                config["position_sizing"]["method"] = "kelly_partial"
+            print(f"[DYNAMIC] Kelly sizing active for balance >= $50")
 
     # === Market Safety Check ===
     symbol = config.get("symbol")
     if not symbol and "symbols" in config:
         symbol = config["symbols"][0]  # Ambil symbol pertama jika hanya ada 'symbols'
     if not symbol:
-        raise ValueError("Config must have 'symbol' or 'symbols' key with at least one symbol.")
+        symbol = "BTCUSDT"  # Default fallback
+        print(f"[WARN] No symbol specified, using default: {symbol}")
+    
     print(f"[INFO] Starting bot with symbol: {symbol}")
-    print(f"[INFO] Balance: ${config['initial_balance']:.2f}")
-    print(f"[INFO] Max positions: {config['max_open_trades']}")
-    print(f"[INFO] Confidence threshold: {config['confidence_threshold']}%")
+    print(f"[INFO] Balance: ${config.get('initial_balance', 0):.2f}")
+    print(f"[INFO] Max positions: {config.get('max_open_trades', 1)}")
+    print(f"[INFO] Confidence threshold: {config.get('confidence_threshold', 70)}%")
 
-    # Initialize and start the async trading bot
+    # Initialize and start the async trading bot with enhanced config
     import asyncio
 
-    bot = BinanceFuturesProBot()
+    bot = BinanceFuturesProBot(config)
     try:
         asyncio.run(bot.start())
     except KeyboardInterrupt:

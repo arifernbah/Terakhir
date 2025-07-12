@@ -15,6 +15,7 @@ import gc
 import psutil
 import os
 import subprocess
+import numpy as np
 
 # Binance imports
 from binance import AsyncClient, BinanceSocketManager
@@ -61,25 +62,43 @@ class BinanceFuturesProBot:
     - Style: Casual Indonesian dengan data Professional
     """
     
-    def __init__(self):
-        # Initialize configuration
-        self.config = SmartConfig()
+    def __init__(self, config=None):
+        # Initialize configuration with equity support
+        if config:
+            self.config = config
+        else:
+            self.config = SmartConfig()
+            
         # Support multiple symbols
-        self.symbols = self.config.symbols or [self.config.symbol]
+        self.symbols = self.config.get('symbols', [self.config.get('symbol', 'BTCUSDT')])
         # For backward compatibility
-        if not hasattr(self.config, 'symbols'):
+        if not hasattr(self.config, 'symbols') and not isinstance(self.config, dict):
             self.symbols = [self.config.symbol]
 
         # Initialize Binance client
         self.client: Optional[AsyncClient] = None
         
+        # Initialize enhanced equity trader if available
+        self.equity_trader = self.config.get('equity_trader') if isinstance(self.config, dict) else None
+        if self.equity_trader:
+            logger.info(f"[EQUITY] Enhanced equity system loaded")
+            logger.info(f"[EQUITY] Risk Level: {self.equity_trader.risk_level}")
+            logger.info(f"[EQUITY] Base Risk: {self.equity_trader.base_risk_percent}%")
+        
         # Initialize professional modules (MODULAR!)
         self.smart_entry = SmartEntry(self.config)
         self.smart_exit = SmartExit(self.config)
-        self.telegram = TelegramNotifier(
-            self.config.telegram_token, 
-            self.config.telegram_chat_id
-        )
+        
+        # Handle telegram config
+        if isinstance(self.config, dict):
+            telegram_config = self.config.get('telegram', {})
+            telegram_token = telegram_config.get('token') or self.config.get('telegram_token')
+            telegram_chat_id = telegram_config.get('chat_id') or self.config.get('telegram_chat_id')
+        else:
+            telegram_token = getattr(self.config, 'telegram_token', None)
+            telegram_chat_id = getattr(self.config, 'telegram_chat_id', None)
+        
+        self.telegram = TelegramNotifier(telegram_token, telegram_chat_id)
         self.position_sizing = KellyCriterionCalculator()
         
         # Bot state
@@ -237,6 +256,8 @@ class BinanceFuturesProBot:
             self.telegram_app.add_handler(CommandHandler("stop", self.telegram_stop))
             self.telegram_app.add_handler(CommandHandler("help", self.telegram_help))
             self.telegram_app.add_handler(CommandHandler("upgrade", self.telegram_upgrade))
+            self.telegram_app.add_handler(CommandHandler("equity", self.telegram_equity))
+            self.telegram_app.add_handler(CommandHandler("risk", self.telegram_risk))
             
             logger.info("Telegram bot initialized with professional commands")
             
@@ -425,17 +446,22 @@ class BinanceFuturesProBot:
         """Handler untuk /help"""
         help_msg = (
             "🤖 *ARIFBOT PRO TRADER COMMANDS*\n\n"
+            "📊 *BASIC COMMANDS:*\n"
             "/start - Welcome message\n"
             "/status - Bot status & positions\n"
             "/balance - Account balance & growth\n"
             "/performance - Trading performance\n"
-            "/upgrade - Performance & upgrade status\n"
+            "/upgrade - Performance & upgrade status\n\n"
+            "💰 *EQUITY COMMANDS:*\n"
+            "/equity - Equity trading status\n"
+            "/risk - Current risk analysis\n\n"
+            "⚙️ *CONTROL COMMANDS:*\n"
             "/mode - Current trading mode\n"
             "/testnet - Switch to testnet\n"
             "/real - Switch to real trading\n"
             "/stop - Stop the bot\n"
             "/help - Show this help\n\n"
-            "Ready untuk cuan professional! 🚀"
+            "🚀 Ready untuk cuan professional dengan equity system!"
         )
         await update.message.reply_text(help_msg, parse_mode='Markdown')
     
@@ -492,6 +518,88 @@ class BinanceFuturesProBot:
         except Exception as e:
             await update.message.reply_text(f"Error: {str(e)}")
     
+    async def telegram_equity(self, update, context):
+        """Handler untuk /equity - Show equity trading status"""
+        try:
+            if not self.equity_trader:
+                await update.message.reply_text("❌ Equity trading system tidak aktif")
+                return
+            
+            # Update equity real-time
+            if self.client:
+                balances = await self.client.futures_account_balance()
+                balance = next((float(x['balance']) for x in balances if x['asset'] == 'USDT'), 0)
+                account_info = await self.client.futures_account()
+                total_unrealized_pnl = float(account_info['totalUnrealizedProfit'])
+                total_equity = balance + total_unrealized_pnl
+                self.equity_trader.update_equity(total_equity)
+            
+            # Get performance stats
+            stats = self.equity_trader.get_performance_stats()
+            
+            equity_msg = (
+                f"💰 *EQUITY TRADING STATUS*\n\n"
+                f"📊 Current Equity: ${self.equity_trader.current_equity:.2f}\n"
+                f"🎯 Peak Equity: ${self.equity_trader.peak_equity:.2f}\n"
+                f"📈 Total Return: {stats.get('total_return', 0):.2f}%\n"
+                f"📉 Current Drawdown: {self.equity_trader.get_current_drawdown():.2f}%\n"
+                f"📊 Daily P&L: {self.equity_trader.get_daily_pnl():.2f}%\n\n"
+                f"🎲 PERFORMANCE:\n"
+                f"• Win Rate: {stats.get('win_rate', 0):.1%}\n"
+                f"• Total Trades: {stats.get('total_trades', 0)}\n"
+                f"• Consecutive Wins: {self.equity_trader.consecutive_wins}\n"
+                f"• Consecutive Losses: {self.equity_trader.consecutive_losses}\n\n"
+                f"⚡ RISK SETTINGS:\n"
+                f"• Risk Level: {self.equity_trader.risk_level.title()}\n"
+                f"• Base Risk: {self.equity_trader.base_risk_percent:.1f}%\n"
+                f"• Max Risk: {self.equity_trader.max_risk_percent:.1f}%\n"
+                f"• Max Drawdown: {self.equity_trader.max_drawdown_percent:.1f}%\n"
+                f"• Leverage: {self.equity_trader.leverage}x\n\n"
+                f"💡 Kelly Suggestion: {stats.get('kelly_suggested_risk', 0):.2f}%"
+            )
+            
+            await update.message.reply_text(equity_msg, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"Error: {str(e)}")
+    
+    async def telegram_risk(self, update, context):
+        """Handler untuk /risk - Show current risk analysis"""
+        try:
+            if not self.equity_trader:
+                await update.message.reply_text("❌ Equity trading system tidak aktif")
+                return
+            
+            # Check current trading conditions
+            should_stop, stop_reason = self.equity_trader.should_stop_trading()
+            
+            # Calculate adaptive risk for next trade
+            adaptive_risk = self.equity_trader.calculate_adaptive_risk()
+            
+            risk_msg = (
+                f"⚠️ *RISK ANALYSIS*\n\n"
+                f"🛡️ SAFETY STATUS:\n"
+                f"• Trading Status: {'🚨 STOPPED' if should_stop else '✅ ACTIVE'}\n"
+                f"• Reason: {stop_reason}\n\n"
+                f"📊 CURRENT RISK:\n"
+                f"• Base Risk: {self.equity_trader.base_risk_percent:.1f}%\n"
+                f"• Adaptive Risk: {adaptive_risk:.1f}%\n"
+                f"• Current Drawdown: {self.equity_trader.get_current_drawdown():.1f}%\n"
+                f"• Daily P&L: {self.equity_trader.get_daily_pnl():.1f}%\n\n"
+                f"🔥 STREAK INFO:\n"
+                f"• Wins: {self.equity_trader.consecutive_wins}\n"
+                f"• Losses: {self.equity_trader.consecutive_losses}\n\n"
+                f"🏦 LIMITS:\n"
+                f"• Max Drawdown: {self.equity_trader.max_drawdown_percent:.1f}%\n"
+                f"• Daily Loss Limit: {self.equity_trader.daily_loss_limit:.1f}%\n"
+                f"• Portfolio Heat: {self.equity_trader.portfolio_heat_limit:.1f}%"
+            )
+            
+            await update.message.reply_text(risk_msg, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"Error: {str(e)}")
+    
     # =========================
     # CORE TRADING FUNCTIONS
     # =========================
@@ -536,7 +644,7 @@ class BinanceFuturesProBot:
             return []
     
     async def execute_trade_pro(self, symbol: str, entry_analysis: Dict[str, Any], klines_data: list = None) -> bool:
-        """Execute trade dengan professional analysis"""
+        """Execute trade dengan professional analysis dan equity-based sizing"""
         try:
             action = entry_analysis['action']
             confidence = entry_analysis['confidence']
@@ -544,29 +652,60 @@ class BinanceFuturesProBot:
             pro_analysis = entry_analysis.get('pro_analysis', {})
             position_sizing = entry_analysis.get('position_sizing', {})
             
-            # Get account balance - konsisten dengan fungsi lain
+            # Get account balance dan update equity
             balances = await self.client.futures_account_balance()
             balance = next((float(x['balance']) for x in balances if x['asset'] == 'USDT'), 0)
             
-            # Use professional position sizing with auto leverage
-            # Use provided risk_percentage or fallback to dynamic fraction based on balance
-            from modules.position_sizing import dynamic_fraction
-            risk_pct = position_sizing.get('risk_percentage', dynamic_fraction(balance))
-            
-            # Calculate auto leverage based on market conditions
-            market_data = {
-                'volatility': self._calculate_market_volatility(symbol, klines_data) if klines_data else 0.03
-            }
-            leverage = int(self.position_sizing.calculate_auto_leverage(symbol, balance, market_data))
-            
-            risk_amount = balance * risk_pct
-            
-            # Get current price
+            # Get current price for position calculation
             ticker = await self.client.futures_symbol_ticker(symbol=symbol)
             current_price = float(ticker['price'])
             
-            # Calculate quantity
-            quantity = (risk_amount * leverage) / current_price
+            # Use Enhanced Equity Position Sizing if available
+            if self.equity_trader:
+                # Update equity dengan real-time balance
+                account_info = await self.client.futures_account()
+                total_unrealized_pnl = float(account_info['totalUnrealizedProfit'])
+                total_equity = balance + total_unrealized_pnl
+                self.equity_trader.update_equity(total_equity)
+                
+                # Calculate stop loss price (simplified: 1% from entry)
+                if action == "long":
+                    stop_loss_price = current_price * 0.99  # 1% below for long
+                else:
+                    stop_loss_price = current_price * 1.01  # 1% above for short
+                
+                # Check if we should enter this trade
+                can_trade, trade_reason = self.equity_trader.should_enter_trade(symbol, confidence / 100)
+                if not can_trade:
+                    logger.info(f"[EQUITY] Trade rejected: {trade_reason}")
+                    await self.telegram.send_casual_message(f"❌ Trade ditolak: {trade_reason}")
+                    return False
+                
+                # Calculate position size with enhanced equity system
+                quantity, risk_percent = self.equity_trader.calculate_position_size_with_leverage(
+                    current_price, stop_loss_price, symbol, confidence / 100
+                )
+                
+                # Get leverage from equity config
+                leverage = self.equity_trader.leverage
+                
+                logger.info(f"[EQUITY] Position size: {quantity:.6f} {symbol.replace('USDT', '')} | Risk: {risk_percent:.2f}% | Leverage: {leverage}x")
+                
+            else:
+                # Fallback to original position sizing
+                from modules.position_sizing import dynamic_fraction
+                risk_pct = position_sizing.get('risk_percentage', dynamic_fraction(balance))
+                
+                # Calculate auto leverage based on market conditions
+                market_data = {
+                    'volatility': self._calculate_market_volatility(symbol, klines_data) if klines_data else 0.03
+                }
+                leverage = int(self.position_sizing.calculate_auto_leverage(symbol, balance, market_data))
+                
+                risk_amount = balance * risk_pct
+                quantity = (risk_amount * leverage) / current_price
+                
+                logger.info(f"[LEGACY] Position size: {quantity:.6f} | Risk: {risk_pct:.2%} | Leverage: {leverage}x")
             
             # Check minimum quantity with safe access
             exchange_info = await self.client.futures_exchange_info()
@@ -623,7 +762,11 @@ class BinanceFuturesProBot:
                 'position_sizing': position_sizing
             }
             
-            logger.info(f"PRO TRADE: {action} {symbol} qty:{quantity:.6f} leverage:{leverage}x risk:{risk_pct:.2%}")
+            # Log dengan risk yang appropriate
+            if self.equity_trader:
+                logger.info(f"PRO TRADE: {action} {symbol} qty:{quantity:.6f} leverage:{leverage}x risk:{risk_percent:.2f}%")
+            else:
+                logger.info(f"PRO TRADE: {action} {symbol} qty:{quantity:.6f} leverage:{leverage}x risk:{risk_pct:.2%}")
             return True
             
         except BinanceAPIException as e:
@@ -843,7 +986,8 @@ class BinanceFuturesProBot:
                         continue
                     
                     # Get market data
-                    klines_data = await self.get_klines_data(symbol, self.config.timeframe)
+                    timeframe = self.config.get('timeframe', '1h') if isinstance(self.config, dict) else getattr(self.config, 'timeframe', '1h')
+                    klines_data = await self.get_klines_data(symbol, timeframe)
                     if not klines_data:
                         logger.warning(f"No klines data for {symbol}")
                         continue
@@ -865,14 +1009,18 @@ class BinanceFuturesProBot:
                     symbol_positions_count = len(symbol_positions)
                     
                     # Check if we can add more positions
-                    can_add_position = current_positions_count < self.config.max_open_positions
+                    max_positions = self.config.get('max_open_positions', 1) if isinstance(self.config, dict) else getattr(self.config, 'max_open_positions', 1)
+                    can_add_position = current_positions_count < max_positions
                     
                     if can_add_position:
                         entry_analysis = self.smart_entry.analyze_entry(klines_data)
                         
                         # Determine entry type based on confidence and existing positions
-                        is_high_confidence = entry_analysis['confidence'] >= getattr(self.config, 'high_confidence_threshold', 80)
-                        is_normal_confidence = entry_analysis['confidence'] >= self.config.confidence_threshold
+                        high_confidence_threshold = self.config.get('high_confidence_threshold', 80) if isinstance(self.config, dict) else getattr(self.config, 'high_confidence_threshold', 80)
+                        confidence_threshold = self.config.get('confidence_threshold', 70) if isinstance(self.config, dict) else getattr(self.config, 'confidence_threshold', 70)
+                        
+                        is_high_confidence = entry_analysis['confidence'] >= high_confidence_threshold
+                        is_normal_confidence = entry_analysis['confidence'] >= confidence_threshold
                         
                         # Check if this is a valid entry
                         can_entry = False
