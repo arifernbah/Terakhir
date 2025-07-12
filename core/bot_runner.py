@@ -277,12 +277,15 @@ class BinanceFuturesProBot:
             logger.error(f"Error initializing Telegram bot: {e}")
 
     async def start_telegram_polling(self):
-        """Start Telegram polling as separate task"""
+        """Start Telegram polling without creating a new event loop."""
         try:
             if self.telegram_app:
                 logger.info("Starting Telegram polling...")
-                await self.telegram_app.run_polling(close_loop=False, stop_signals=None)
-                logger.info("Telegram polling started successfully")
+                await self.telegram_app.start()
+                await self.telegram_app.updater.start_polling()
+                logger.info("Telegram polling started ✔️")
+                # Hold until stopped
+                await self.telegram_app.updater.wait_until_closed()
         except Exception as e:
             logger.error(f"Error starting Telegram polling: {e}")
 
@@ -971,7 +974,7 @@ class BinanceFuturesProBot:
                     can_add_position = current_positions_count < max_positions
                     
                     if can_add_position:
-                        entry_analysis = self.smart_entry.analyze_entry(klines_data)
+                        entry_analysis = await self.smart_entry.analyze_entry(klines_data)
                         
                         # Determine entry type based on confidence and existing positions
                         high_confidence_threshold = self.config.get('high_confidence_threshold', 80) if isinstance(self.config, dict) else getattr(self.config, 'high_confidence_threshold', 80)
@@ -1017,7 +1020,7 @@ class BinanceFuturesProBot:
                             # Check portfolio heat limit
                             portfolio_heat = self.position_sizing.get_portfolio_heat(open_positions, current_balance)
                             heat_limit = getattr(self.config, 'portfolio_heat_limit', 10) / 100
-                            
+
                             if portfolio_heat['total_heat'] < heat_limit:
                                 success = await self.execute_trade_pro(symbol, entry_analysis, klines_data)
                                 if success:
