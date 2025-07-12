@@ -122,11 +122,12 @@ class EquityBasedTrading:
         else:
             adjusted_risk = base_risk
         
-        # Adjust berdasarkan drawdown
+        # ---- Aggressive draw-down-based risk reduction ----
         current_drawdown = self.get_current_drawdown()
-        if current_drawdown > 10:
-            # Jika drawdown > 10%, kurangi risk
-            drawdown_multiplier = 1 - (current_drawdown / 100)
+        if current_drawdown > 5:
+            # Kurangi risk secara non-linear: semakin besar DD semakin kecil risk.
+            # Formula empiris: (1 - dd^2 / 1000) dibatasi minimal 20% dari base.
+            drawdown_multiplier = max(0.2, 1 - (current_drawdown ** 2) / 1000)
             adjusted_risk *= drawdown_multiplier
         
         # Pastikan tidak melebihi batas maksimal
