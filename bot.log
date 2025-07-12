@@ -13,3 +13,7 @@
 2025-07-12 10:09:54,105 - INFO - [EQUITY] Enhanced equity system loaded
 2025-07-12 10:09:54,105 - INFO - [EQUITY] Risk Level: professional
 2025-07-12 10:09:54,105 - INFO - [EQUITY] Base Risk: 1.8%
+2025-07-12 10:16:06,434 - WARNING - Telegram credentials not configured
+2025-07-12 10:16:06,434 - ERROR - API keys tidak tersedia
+2025-07-12 10:16:08,437 - WARNING - Telegram credentials not configured
+2025-07-12 10:16:08,437 - ERROR - API keys tidak tersedia
