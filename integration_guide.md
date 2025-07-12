@@ -26,17 +26,17 @@ class BinanceFuturesProBot:
         initial_balance = self.get_account_balance()
         self.equity_trader = EquityBasedTrading(initial_balance, self.equity_config)
         
-    def calculate_position_size(self, symbol, stop_loss_distance):
+    def calculate_position_size(self, symbol, entry_price, stop_loss_price):
         """
-        Ganti fungsi position sizing dengan equity-based
+        Ganti fungsi position sizing dengan equity-based untuk Binance Futures
         """
         # Update equity dari balance saat ini
-        current_balance = self.get_account_balance()
+        current_balance = self.get_futures_account_balance()
         self.equity_trader.update_equity(current_balance)
         
         # Hitung position size berdasarkan equity
         position_size, risk_percent = self.equity_trader.calculate_position_size(
-            stop_loss_distance, symbol
+            entry_price, stop_loss_price, symbol
         )
         
         return position_size, risk_percent
@@ -92,14 +92,14 @@ if config.get('equity_trading', {}).get('enabled', False):
 Edit `modules/position_sizing.py`:
 
 ```python
-def calculate_position_size(self, symbol, price, stop_loss_distance, confidence=0.7):
+def calculate_position_size(self, symbol, entry_price, stop_loss_price, confidence=0.7):
     """
-    Enhanced position sizing with equity-based calculation
+    Enhanced position sizing with equity-based calculation for Binance Futures
     """
     if self.config.get('equity_trading', {}).get('enabled', False):
         # Use equity-based position sizing
         position_size, risk_percent = self.equity_trader.calculate_position_size(
-            stop_loss_distance, symbol
+            entry_price, stop_loss_price, symbol
         )
         
         # Adjust based on confidence level
@@ -109,7 +109,7 @@ def calculate_position_size(self, symbol, price, stop_loss_distance, confidence=
         return position_size
     else:
         # Use original position sizing
-        return self.calculate_original_position_size(symbol, price, stop_loss_distance)
+        return self.calculate_original_position_size(symbol, entry_price, stop_loss_price)
 ```
 
 ## 🔧 Konfigurasi Praktis
@@ -289,18 +289,26 @@ Equity-Based Risk:
 
 ### 1. **Position Size Terlalu Kecil**
 ```python
-# Adjust minimum position size
-if position_size < 0.001:
-    position_size = 0.001  # Minimum untuk futures
+# Adjust minimum position size untuk Binance Futures
+if symbol == "BTCUSDT" and position_size < 0.001:
+    position_size = 0.001  # Minimum 0.001 BTC untuk BTCUSDT
+elif symbol == "ETHUSDT" and position_size < 0.001:
+    position_size = 0.001  # Minimum 0.001 ETH untuk ETHUSDT
+elif position_size < 0.01:
+    position_size = 0.01   # Minimum untuk altcoin pairs
 ```
 
 ### 2. **Equity Update Delay**
 ```python
-# Update equity secara real-time
+# Update equity secara real-time untuk Binance Futures
 def update_equity_realtime(self):
-    current_balance = self.get_futures_balance()
-    unrealized_pnl = self.get_unrealized_pnl()
-    total_equity = current_balance + unrealized_pnl
+    # Dapatkan futures account info
+    futures_account = self.client.futures_account()
+    
+    # Total wallet balance + unrealized PnL
+    total_wallet_balance = float(futures_account['totalWalletBalance'])
+    total_unrealized_pnl = float(futures_account['totalUnrealizedProfit'])
+    total_equity = total_wallet_balance + total_unrealized_pnl
     
     self.equity_trader.update_equity(total_equity)
 ```

@@ -61,10 +61,15 @@ class EquityBasedTrading:
         """
         return (self.peak_equity - self.current_equity) / self.peak_equity * 100
     
-    def calculate_position_size(self, stop_loss_distance: float, symbol: str = "BTCUSDT") -> Tuple[float, float]:
+    def calculate_position_size(self, entry_price: float, stop_loss_price: float, symbol: str = "BTCUSDT") -> Tuple[float, float]:
         """
-        Hitung ukuran posisi berdasarkan equity dan kondisi terkini
+        Hitung ukuran posisi berdasarkan equity dan kondisi terkini (Binance Futures)
         
+        Args:
+            entry_price: Harga entry dalam USDT
+            stop_loss_price: Harga stop loss dalam USDT
+            symbol: Trading pair (default: BTCUSDT)
+            
         Returns:
             Tuple[position_size, risk_percent]
         """
@@ -83,15 +88,19 @@ class EquityBasedTrading:
         # 3. Adjust risk berdasarkan performa recent
         risk_percent = self.calculate_adaptive_risk()
         
-        # 4. Hitung position size
+        # 4. Hitung position size untuk Binance Futures
         risk_amount = self.current_equity * (risk_percent / 100)
-        position_size = risk_amount / stop_loss_distance
+        price_distance = abs(entry_price - stop_loss_price)
+        position_size = risk_amount / price_distance
         
-        print(f"📊 Position Sizing:")
+        print(f"📊 Position Sizing for {symbol}:")
         print(f"   💰 Current Equity: ${self.current_equity:.2f}")
         print(f"   🎯 Risk %: {risk_percent:.2f}%")
         print(f"   💵 Risk Amount: ${risk_amount:.2f}")
-        print(f"   📈 Position Size: {position_size:.6f}")
+        print(f"   📈 Entry Price: ${entry_price:.2f}")
+        print(f"   🛑 Stop Loss: ${stop_loss_price:.2f}")
+        print(f"   📏 Price Distance: ${price_distance:.2f}")
+        print(f"   📊 Position Size: {position_size:.6f} {symbol.replace('USDT', '')}")
         
         return position_size, risk_percent
     
@@ -303,20 +312,26 @@ def example_usage():
     # Simulasi beberapa trades
     print("\n🎮 Simulasi Trading:")
     
-    # Trade 1: Winning trade
-    position_size, risk_percent = equity_trader.calculate_position_size(stop_loss_distance=50)
+    # Trade 1: Winning trade BTCUSDT
+    entry_price = 50000
+    stop_loss_price = 49500  # 1% stop loss
+    position_size, risk_percent = equity_trader.calculate_position_size(entry_price, stop_loss_price)
     if position_size > 0:
-        equity_trader.record_trade("LONG", 50000, 50100, position_size, 20)
+        equity_trader.record_trade("LONG", entry_price, 50250, position_size, 20)
     
-    # Trade 2: Losing trade
-    position_size, risk_percent = equity_trader.calculate_position_size(stop_loss_distance=60)
+    # Trade 2: Losing trade BTCUSDT
+    entry_price = 50250
+    stop_loss_price = 50750  # 1% stop loss untuk SHORT
+    position_size, risk_percent = equity_trader.calculate_position_size(entry_price, stop_loss_price)
     if position_size > 0:
-        equity_trader.record_trade("SHORT", 50100, 50150, position_size, -15)
+        equity_trader.record_trade("SHORT", entry_price, 50450, position_size, -15)
     
-    # Trade 3: Winning trade
-    position_size, risk_percent = equity_trader.calculate_position_size(stop_loss_distance=45)
+    # Trade 3: Winning trade BTCUSDT
+    entry_price = 50450
+    stop_loss_price = 49950  # 1% stop loss
+    position_size, risk_percent = equity_trader.calculate_position_size(entry_price, stop_loss_price)
     if position_size > 0:
-        equity_trader.record_trade("LONG", 50150, 50200, position_size, 25)
+        equity_trader.record_trade("LONG", entry_price, 50700, position_size, 25)
     
     # Print final status
     equity_trader.print_status()

@@ -43,30 +43,33 @@ Position Size = (Equity × Risk %) / Stop Loss Distance
 ```
 Equity: $1,000
 Risk per trade: 2% = $20
-Stop Loss: 50 pips
-Pip value: $1 per pip
+Stop Loss Distance: $100 (contoh: dari $50,000 ke $49,900)
+Position Size = $20 / $100 = 0.2 BTC
 
-Position Size = $20 / 50 = 0.4 lot
+Atau dengan persentase:
+Stop Loss: 0.5% dari entry price
+Position Size = $20 / (Entry Price × 0.005) = Size dalam koin
 ```
 
 ## 📈 Strategi Trading Berdasarkan Equity
 
 ### 1. **Percentage Risk Model**
 ```python
-# Contoh implementasi
-def calculate_position_size(equity, risk_percent, stop_loss_pips, pip_value):
+# Contoh implementasi untuk Binance Futures
+def calculate_position_size(equity, risk_percent, entry_price, stop_loss_price):
     risk_amount = equity * (risk_percent / 100)
-    position_size = risk_amount / (stop_loss_pips * pip_value)
+    price_distance = abs(entry_price - stop_loss_price)
+    position_size = risk_amount / price_distance
     return position_size
 
-# Penggunaan
+# Penggunaan untuk BTCUSDT
 equity = 1000  # $1,000
 risk_percent = 2  # 2%
-stop_loss_pips = 50
-pip_value = 1
+entry_price = 50000  # $50,000
+stop_loss_price = 49500  # $49,500 (1% stop loss)
 
-position_size = calculate_position_size(equity, risk_percent, stop_loss_pips, pip_value)
-print(f"Position Size: {position_size} lot")
+position_size = calculate_position_size(equity, risk_percent, entry_price, stop_loss_price)
+print(f"Position Size: {position_size:.6f} BTC")
 ```
 
 ### 2. **Kelly Criterion**
