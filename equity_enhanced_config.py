@@ -74,6 +74,19 @@ class EnhancedEquityTrading(EquityBasedTrading):
         if selected_config is None:
             selected_config = balance_configs[-1][1]
         
+        # Ensure multi-pair support: if only single 'symbol' provided, supply
+        # default top-cap list so the bot can scan multiple pairs automatically.
+        if 'symbols' not in selected_config:
+            default_pairs = [
+                "DOGEUSDT", "BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT",
+                "SOLUSDT", "MATICUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT"
+            ]
+            # Preserve the original primary symbol at index 0 for backward compatibility.
+            primary = selected_config.get('symbol', 'BTCUSDT')
+            if primary in default_pairs:
+                default_pairs.remove(primary)
+            selected_config['symbols'] = [primary] + default_pairs
+
         return selected_config
     
     def convert_to_equity_config(self, hybrid_config: Dict[str, Any]) -> Dict[str, Any]:
