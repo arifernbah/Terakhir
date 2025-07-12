@@ -56,24 +56,29 @@ class TelegramNotifier:
             # Note: Manual escaping is done in message creation, so we don't auto-escape here
             # This prevents double escaping of already escaped characters
             
-            # Send message
-            await self.bot.send_message(
-                chat_id=self.chat_id,
-                text=message,
-                parse_mode=parse_mode
-            )
-            
-        except Exception as e:
-            logger.error(f"Error sending Telegram message: {e}")
-            # Fallback: try sending without parse_mode
+            # Attempt to send message using the requested parse_mode first
             try:
                 await self.bot.send_message(
                     chat_id=self.chat_id,
                     text=message,
-                    parse_mode=None
+                    parse_mode=parse_mode
                 )
-            except Exception as e2:
-                logger.error(f"Error sending Telegram message (fallback): {e2}")
+            except telegram.error.BadRequest as e:
+                # Frequently caused by un-escaped Markdown entities.
+                if "can't parse entities" in str(e):
+                    # Retry without parse mode (emoji & plain text are preserved).
+                    logger.debug(f"Markdown parse failed, resending without formatting: {e}")
+                    await self.bot.send_message(
+                        chat_id=self.chat_id,
+                        text=message,
+                        parse_mode=None
+                    )
+                else:
+                    raise
+            
+        except Exception as e:
+            # Log other errors once (to avoid noisy warnings) but continue silently.
+            logger.error(f"Error sending Telegram message: {e}")
     
     def _escape_markdown(self, text: str) -> str:
         """Escape special characters for Markdown parsing"""
