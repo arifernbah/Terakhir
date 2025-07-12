@@ -15,6 +15,7 @@ from .session_timing import TradingSessionAnalyzer
 from .indicators import SmartIndicators
 # Sentiment module
 from modules.sentiment import get_market_sentiment
+from modules.constants import get_fee_rate  # Fee-aware calculations
 
 logger = logging.getLogger(__name__)
 
@@ -974,11 +975,15 @@ class SmartExit:
             if entry_price == 0:
                 return {"action": "hold", "reason": "Invalid entry price"}
             
-            # Calculate profit percentage
+            # === Fee-aware profit percentage ===
             if side == 'LONG':
                 profit_pct = (current_price - entry_price) / entry_price
             else:
                 profit_pct = (entry_price - current_price) / entry_price
+
+            # Kurangi biaya (taker fee dua kali: buka + tutup)
+            total_fee_pct = get_fee_rate() * 2  # contoh: 0.08% → 0.16%
+            profit_pct -= total_fee_pct
             
             # Extract comprehensive market data
             if klines_data and len(klines_data) >= 50:
